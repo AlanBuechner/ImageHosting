@@ -1,0 +1,12 @@
+{
+	"db" : {
+		"uri" : "mongodb://localhost/ImageHosting"
+	},
+	"session" :{
+		"name" : "sid",
+		"secret" : "secret"
+	},
+	"look" : {
+		"title" : "Image Hosting"
+	}
+}

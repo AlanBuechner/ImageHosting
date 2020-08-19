@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title><%= title%> | login</title>
+
+		<link rel="stylesheet" href="css/larform.css">
+		<link rel="stylesheet" href="css/login.css">
+	</head>
+
+	<body>
+		<div id="container">
+			<h1>login</h1>
+			<p id="error">
+				<% if (error == "error.auth.UserNotFound" || error == "error.auth.WrongPassword") { %>
+					wrong username or password please try again
+				<% } %>
+			</p>
+			<form method="POST" action="login">
+				<input type="text" class="input" id="username" placeholder="username" name="username" required>
+				<input type="password" class="input" id="password" placeholder="password" name="password" required>
+				<input type="submit" class="input" id="submit" value="submit">
+			</form>
+
+			<div id="registerContainer">
+				<p>dont have an account?</p>
+				<a href="register" class="input" id="register">register</a>
+			</div>
+		</div>
+	</body>
+</html>
