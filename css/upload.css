@@ -1,0 +1,27 @@
+#uploadContainer
+{
+	display: flex;
+	justify-content: center;
+	text-align: center;
+	display: block;
+}
+
+#uploadContainer input, #uploadContainer label
+{
+	display: block;
+	padding: 5px;
+	margin: auto;
+	margin-top: 10px;
+	margin-bottom: 10px;
+	border: none;
+	width: 50vh;
+	border-radius: 10px;
+	color: #cccccc;
+	background-color: #222;
+	font-size: medium;
+}
+
+#uploadContainer input[type="file"]
+{
+	display: none;
+}

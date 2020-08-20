@@ -7,7 +7,7 @@
 	
 	<div class="collapse navbar-collapse" id="navbarColor01">
 		<ul class="navbar-nav mr-auto">
-		<li class="nav-item <% if(active == "home") {%>active<%}%>">
+			<li class="nav-item <% if(active == "home") {%>active<%}%>">
 				<a class="nav-link" href="/">Home</a>
 			</li>
 			<li class="nav-item <% if(active == "favorites") {%>active<%}%>">
@@ -21,7 +21,10 @@
 					<a class="dropdown-item" href="browseTags">Tags</a>
 					<a class="dropdown-item" href="browseAll">All</a>
 				</div>
-			  </li>
+			</li>
+			<li class="nav-item <% if(active == "upload") {%>active<%}%>">
+				<a class="nav-link" href="/upload">Upload</a>
+			</li>
 		</ul>
 		<form class="form-inline" method="POST" action="logout">
 			<button class="btn btn-outline-info my-2 my-sm-0" id="logout" type="submit">Logout</button>

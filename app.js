@@ -1,14 +1,57 @@
 const express = require('express');
 const session = require('express-session');
+const multer = require('multer');
 const bodyParser = require('body-parser');
+const path = require('path');
 const crypto = require('crypto');
 const users = require('./users');
 const config = require('./config');
+const { request } = require('http');
 
 function hash(text)
 {
 	return crypto.createHash('sha256').update(text).digest('hex');
 }
+
+const redirectLogin = function(req, res, next)
+{
+	if(!req.session.userId){
+		res.redirect('/login');
+	}
+	else{
+		next();
+	}
+}
+
+const storage = multer.diskStorage({
+	destination: function(req, file, cb){
+		cb(null, './users/'+req.session.userId+'/');
+	},
+	filename: function(req, file, cb){
+		cb(null, file.fieldname+'-'+Date.now()+path.extname(file.originalname));
+	}
+});
+
+function checkFileType(file, cb){
+	const filetypes = /jpeg|jpg|png|gif/;
+	const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+	const mimetype = filetypes.test(file.mimetype);
+
+	if(extname && mimetype){
+		return cb(null, true);
+	}
+	else{
+		cb('Error: Imgaes Only', false);
+	}
+}
+
+const upload = multer({
+	storage: storage,
+	fileFilter: function(req, file, cb){
+		checkFileType(file, cb);
+	}
+}).single('image');
 
 // create express app
 const app = express();
@@ -41,15 +84,6 @@ app.use(bodyParser.urlencoded({
 	extended: true
 }));
 
-const redirectLogin = function(req, res, next)
-{
-	if(!req.session.userId){
-		res.redirect('/login');
-	}
-	else{
-		next();
-	}
-}
 
 app.use(function(req, res, next){
 	const { userId } = req.session;
@@ -68,17 +102,31 @@ app.get('/', redirectLogin, function(req, res){
 
 // favorites page
 app.get('/favorites', redirectLogin, function(req, res){
-	res.render('favorites', {"title" : config.look.title, "active" : "favorites"})
+	res.render('favorites', {"title" : config.look.title, "active" : "favorites"});
 });
 
 // browseTags page
 app.get('/browseTags', redirectLogin, function(req, res){
-	res.render('browseTags', {"title" : config.look.title, "active" : "browseTags"})
+	res.render('browseTags', {"title" : config.look.title, "active" : "browseTags"});
 });
 
 // browseAll page
 app.get('/browseAll', redirectLogin, function(req, res){
-	res.render('browseAll', {"title" : config.look.title, "active" : "browseAll"})
+	res.render('browseAll', {"title" : config.look.title, "active" : "browseAll"});
+});
+
+// upload page
+app.get('/upload', redirectLogin, function(req, res){
+	res.render('upload', {"title" : config.look.title, "active" : "upload"});
+});
+
+app.post('/upload', redirectLogin, upload, function(req, res){
+	// add image to user tags
+	const filename = req.file.filename;
+
+	users.AddImage(req.session.userId, filename, "all");
+
+	res.redirect('./upload');
 });
 
 // login page
