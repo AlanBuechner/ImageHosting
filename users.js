@@ -7,6 +7,11 @@ const config = require('./config');
 const dbURI = config.db.uri;
 const Schema = mongoose.Schema;
 
+const fileSchema = new Schema({
+	name: {type: String, required: true, unique: true},
+	tags: {type: Array, required: false}
+});
+
 const tagSchema = new Schema({
 	name: {type: String, required: true, unique: true},
 	files: {type: Array, required: false}
@@ -16,11 +21,13 @@ const userSchema = new Schema({
 	username: {type: String, required: true, unique: true},
 	email: {type: String, required: true, unique: true},
 	password: {type: String, required: true},
-	tags: {type:Array, required: false, ref: 'Tag'}
+	tags: {type:Array, required: false, ref: 'Tag'},
+	files: {type: Array, required: false, ref: 'File'}
 },{
 	timestamps: true
 });
 
+const File = mongoose.model('File', fileSchema);
 const Tag = mongoose.model('Tag', tagSchema);
 const User = mongoose.model('User', userSchema);
 
@@ -101,29 +108,152 @@ function GetUserByEmail(email, callback)
 	});
 }
 
-function AddImage(userID, filename, tag)
+async function AddImageToTag(userID, filename, tag)
 {
-	User.findById(userID).then(async function(result)
-	{
-		// find tag
-		var foundTag = result.tags.find(element => element.name == tag);
-		// add tag if dosent exist
-		if(!foundTag){
-			foundTag = {name: tag, files: []}
-			result.tags.push(foundTag);
-		}
+	found = (await GetAllTagsFromImage(userID, filename)).find(e => e == tag);
+	if(!found){
+		// update tags array
+		User.findById(userID).then(async function(result)
+		{
+			// find tag
+			var foundTag = result.tags.find(element => element.name == tag);
+			// add tag if dosent exist
+			if(!foundTag){
+				foundTag = {name: tag, files: []};
+				result.tags.push(foundTag);
+			}
 
-		await result.save(function(err){
+			result.save(function(err){
+				if(err){
+					console.log(err);
+				}
+				else{
+					// update tags file array
+					User.updateOne({_id: userID, "tags.name": tag}, {$push: {'tags.$.files': filename}}, function(err){
+						if(err){
+							console.log(err);
+						}
+					});
+				}
+			});
+		});
+
+		// update files array
+		User.findById(userID).then(async function(result)
+		{
+			// find file
+			var foundFile = result.files.find(element => element.name == filename);
+			// add file if dosent exist
+			if(!foundFile){
+				foundFile = {name: filename, tags:[]};
+				result.files.push(foundFile);
+			}
+
+			result.save(function(err){
+				if(err){
+					console.log(err);
+				}
+				else{
+					User.updateOne({_id: userID, "files.name": filename}, {$push: {'files.$.tags': tag}}, function(err){
+						if(err){
+							console.log(err);
+						}
+					});
+				}
+			});
+		});
+	}
+}
+
+async function RemoveImageFromTag(userID, filename, tag)
+{
+		// remove image from tag
+		User.updateOne({
+			_id: userID,
+			"tags.name": tag
+		},{
+			"$pullAll": { "tags.$.files" : [filename] }
+		}, function(err){
 			if(err){
 				console.log(err);
 			}
-			else{
+		});
+	
+		// remove tag from image
+		User.updateOne({
+			_id: userID,
+			"files.name": filename
+		},{
+			"$pullAll": { "files.$.tags" : [tag] }
+		}, function(err){
+			if(err){
+				console.log(err);
 			}
 		});
+}
 
-		// update tags file array
-		await User.update({_id: userID, "tags.name": tag}, {$push: {'tags.$.files': filename}});
+async function RemoveImage(userID, filename)
+{
+	// remove image from files array
+	User.updateOne({
+		_id: userID,
+	},{
+		"$pull": { "files": { name: filename } }
+	}, function(err){
+		if(err){
+			console.log(err);
+		}
 	});
+
+	// remove image from all tags
+
+	const tags = await GetTags(userID);
+
+	tags.forEach(function(tag){
+		User.updateOne({
+			_id: userID,
+			"tags.name": tag
+		},{
+			"$pullAll": { "tags.$.files" : [filename] }
+		}, function(err){
+			if(err){
+				console.log(err);
+			}
+		});
+	});
+}
+
+async function GetTags(userID)
+{
+	var toReturn = [];
+	await User.findById(userID).then(async function(result){
+		result.tags.forEach(element => toReturn.push(element.name));
+	});
+	return toReturn;
+}
+
+async function GetAllImagesFromTag(userID, tag)
+{
+	var toReturn = {};
+	await User.findById(userID).then(async function(result){
+		const foundTag = await result.tags.find(element => element.name == tag);
+		if(foundTag){
+			toReturn = foundTag.files
+		}
+	});
+	return toReturn;
+}
+
+async function GetAllTagsFromImage(userID, filename)
+{
+	var toReturn = [];
+	await User.findById(userID).then(async function(result){
+		const foundFile = result.files.find(element => element.name == filename);
+		if(foundFile){
+			toReturn = foundFile.tags;
+		}
+	});
+	return toReturn;
 }
 
 module.exports = {
@@ -132,5 +262,10 @@ module.exports = {
 	GetUserByID,
 	GetUserByName,
 	GetUserByEmail,
-	AddImage,
+	AddImageToTag,
+	RemoveImageFromTag,
+	RemoveImage,
+	GetTags,
+	GetAllImagesFromTag,
+	GetAllTagsFromImage
 };

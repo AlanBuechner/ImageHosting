@@ -4,9 +4,9 @@ const multer = require('multer');
 const bodyParser = require('body-parser');
 const path = require('path');
 const crypto = require('crypto');
+const fs = require('fs');
 const users = require('./users');
 const config = require('./config');
-const { request } = require('http');
 
 function hash(text)
 {
@@ -19,6 +19,13 @@ const redirectLogin = function(req, res, next)
 		res.redirect('/login');
 	}
 	else{
+		next();
+	}
+}
+
+const canAccess = function(req, res, next)
+{
+	if(req.path.includes(req.session.userId.toString())){
 		next();
 	}
 }
@@ -62,10 +69,6 @@ app.set('view engine', 'ejs');
 
 app.listen(port);
 
-// set statics
-app.use('/css', express.static('css'));
-app.use('/js', express.static('js'));
-
 app.use(express.urlencoded({ extended: false }));
 
 // sessions
@@ -76,14 +79,13 @@ app.use(session({
 	saveUninitialized: false,
 	store: users.sessionStore,
 	cookie: {
-		maxAge: 1000 * 60 * 60
+		maxAge: config.session.timeout
 	}
 }));
 
 app.use(bodyParser.urlencoded({
 	extended: true
 }));
-
 
 app.use(function(req, res, next){
 	const { userId } = req.session;
@@ -95,24 +97,49 @@ app.use(function(req, res, next){
 	next();
 });
 
+// set statics
+app.use('/css', express.static('css'));
+app.use('/js', express.static('js'));
+app.use('/public', express.static('public'));
+app.use('/images', redirectLogin, canAccess, express.static("users"));
+
+async function EvaluateExpression(userID, expression)
+{
+	const files = await users.GetAllImagesFromTag(userID, expression);
+	var response = [];
+	for(i = 0; i < files.length; i++){
+		tags = await users.GetAllTagsFromImage(userID, files[i]);
+		await tags.splice(0,1);
+		response.push({
+			name: files[i],
+			tags: tags
+		});
+	}
+	return response;
+}
+
+// get the list of files
+app.get('/files', redirectLogin, async function(req, res){
+	const userID = await req.session.userId;
+	const expression = await req.query['expression'];
+	const response = await EvaluateExpression(userID, expression);
+	res.send({files: response, userID: req.session.userId});
+});
+
 // home page
 app.get('/', redirectLogin, function(req, res){
 	res.render('index', {"title" : config.look.title, "active" : "home"});
 });
 
-// favorites page
-app.get('/favorites', redirectLogin, function(req, res){
-	res.render('favorites', {"title" : config.look.title, "active" : "favorites"});
+// gallery page
+app.get('/gallery', redirectLogin, async function(req, res){
+	const active = req.query['active'] ? req.query['active'] : '';
+	res.render('gallery', {title: config.look.title, active: active, userID: req.session.userId, files: []});
 });
 
 // browseTags page
-app.get('/browseTags', redirectLogin, function(req, res){
-	res.render('browseTags', {"title" : config.look.title, "active" : "browseTags"});
-});
-
-// browseAll page
-app.get('/browseAll', redirectLogin, function(req, res){
-	res.render('browseAll', {"title" : config.look.title, "active" : "browseAll"});
+app.get('/browseTags', redirectLogin, async function(req, res){
+	res.render('browseTags', {"title" : config.look.title, "active" : "browseTags", "userID": req.session.userId, "tags" : await users.GetTags(req.session.userId)});
 });
 
 // upload page
@@ -124,9 +151,37 @@ app.post('/upload', redirectLogin, upload, function(req, res){
 	// add image to user tags
 	const filename = req.file.filename;
 
-	users.AddImage(req.session.userId, filename, "all");
+	users.AddImageToTag(req.session.userId, filename, "all");
 
 	res.redirect('./upload');
+});
+
+// delete images
+app.delete('/removeImage', redirectLogin, function(req, res){
+	const filename = req.query['filename'];
+	// remove image from database
+	users.RemoveImage(req.session.userId, filename);
+
+	// delete image form files
+	fs.unlink('users/'+req.session.userId+'/'+filename, function(err){
+		if(err){
+			console.log(err);
+		}
+	});
+
+	res.send('success');
+});
+
+// add tags
+app.put('/addTag', redirectLogin, function(req, res){
+	users.AddImageToTag(req.session.userId, req.query['filename'], req.query['tag']);
+	res.send('success');
+});
+
+// remove tags
+app.delete('/removeTag', redirectLogin, function(req, res){
+	users.RemoveImageFromTag(req.session.userId, req.query['filename'], req.query['tag']);
+	res.send('success');
 });
 
 // login page

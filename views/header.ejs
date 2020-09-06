@@ -10,17 +10,14 @@
 			<li class="nav-item <% if(active == "home") {%>active<%}%>">
 				<a class="nav-link" href="/">Home</a>
 			</li>
-			<li class="nav-item <% if(active == "favorites") {%>active<%}%>">
-				<a class="nav-link" href="favorites">Favorites</a>
+			<li class="nav-item <% if(active == "all") {%>active<%}%>">
+				<a class="nav-link" href="gallery?active=all&search=all">All</a>
 			</li>
-			<li class="nav-item dropdown <% if(active == "browse tags" || active == "browse all") {%>active<%}%>">
-				<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-				  Browse
-				</a>
-				<div class="dropdown-menu" aria-labelledby="navbarDropdown">
-					<a class="dropdown-item" href="browseTags">Tags</a>
-					<a class="dropdown-item" href="browseAll">All</a>
-				</div>
+			<li class="nav-item <% if(active == "favorites") {%>active<%}%>">
+				<a class="nav-link" href="gallery?active=favorites&search=favorites">Favorites</a>
+			</li>
+			<li class="nav-item <% if(active == "browse Tags") {%>active<%}%>">
+				<a class="nav-link" href="/browseTags">Browse Tags</a>
 			</li>
 			<li class="nav-item <% if(active == "upload") {%>active<%}%>">
 				<a class="nav-link" href="/upload">Upload</a>
@@ -29,9 +26,11 @@
 		<form class="form-inline" method="POST" action="logout">
 			<button class="btn btn-outline-info my-2 my-sm-0" id="logout" type="submit">Logout</button>
 		</form>
-		<form class="form-inline">
-			<input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
-			<button class="btn btn-outline-info my-2 my-sm-0" type="submit">Search</button>
-		</form>
+		<div class="form-inline">
+			<input id="searchExpression" class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
+			<button id="submit" class="btn btn-outline-info my-2 my-sm-0" type="submit">Search</button>
+		</div>
 	</div>
+
+	<script src="js/search.js"></script>
 </nav>

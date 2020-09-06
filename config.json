@@ -4,7 +4,8 @@
 	},
 	"session" :{
 		"name" : "sid",
-		"secret" : "secret"
+		"secret" : "secret",
+		"timeout" : 360000000
 	},
 	"look" : {
 		"title" : "Image Hosting"

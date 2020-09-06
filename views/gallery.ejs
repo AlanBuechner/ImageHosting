@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+
+<html>
+	<head>
+		<title><%= title%> | tag view</title>
+
+		<meta charset="utf-8">
+	    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+		<!-- cdns -->
+		<%- include('./cdns.ejs')%>
+
+		<link rel="stylesheet" href="css/gallery.css">
+		<link rel="stylesheet" href="css/mainStyle.css">
+
+		<script src="js/gallery.js"></script>
+	</head>
+
+	<body>
+
+		<%- include('./header.ejs') %>
+
+		<div id="container">
+			<div id="gallery">
+
+			</div>
+
+			<div id="imageView">
+				<div class="carousel">
+					<button class="btn-left"></button>
+					<div class="track-container">
+						<ul class="track">
+
+						</ul>
+					</div>
+					<button class="btn-right"></button>
+
+					<div class="nav">
+						<div class="tags">
+							
+						</div>
+						<img id="delete" src="public/delete.png">
+
+						</img>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
