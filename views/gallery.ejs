@@ -10,9 +10,12 @@
 		<!-- cdns -->
 		<%- include('./cdns.ejs')%>
 
+		<link rel="stylesheet" href="css/tags.css">
 		<link rel="stylesheet" href="css/gallery.css">
 		<link rel="stylesheet" href="css/mainStyle.css">
 
+		<script src="js/tags.js"></script>
+		<script src="js/fileExtensions.js"></script>
 		<script src="js/gallery.js"></script>
 	</head>
 
@@ -27,21 +30,19 @@
 
 			<div id="imageView">
 				<div class="carousel">
-					<button class="btn-left"></button>
+					<button class="btn-left">&#60;</button>
 					<div class="track-container">
 						<ul class="track">
 
 						</ul>
 					</div>
-					<button class="btn-right"></button>
+					<button class="btn-right">&#62;</button>
 
 					<div class="nav">
-						<div class="tags">
-							
+						<div class="tags"></div>
+						<div id="delete">
+							<img src="public/delete.png"></img>
 						</div>
-						<img id="delete" src="public/delete.png">
-
-						</img>
 					</div>
 				</div>
 			</div>

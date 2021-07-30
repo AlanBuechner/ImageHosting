@@ -1,0 +1,66 @@
+.tags
+{
+	position: relative;
+}
+
+.tags .tag
+{
+	position: relative;
+	float: left;
+	background: transparent;
+	vertical-align: center;
+	height: 28px;
+	border: 2px solid #17a2b8;
+	border-radius: 15px;
+	padding-left: 7.5px;
+	padding-right: 7.5px;
+	margin: 5px;
+	transition: 0.5s;
+	cursor: pointer;
+}
+
+.tags .sidebutton
+{
+	padding-right: 27px;
+}
+
+.tags .tag p
+{
+	margin: 0;
+	float: left;
+}
+
+.tags .tag .tag_btn
+{
+	position: absolute;
+	right: 0;
+	padding-right: 7.5px;
+	padding-left: 7.5px;
+	height: 100%;
+	margin: 0;
+}
+
+.tags .tag .tag_btn img
+{
+	height: 50%;
+	object-fit: fill;
+}
+
+.tags .tag .newTag
+{
+	display: none;
+	float: left;
+	width: 0;
+}
+
+.tags .tag .newTag #input
+{
+	background: transparent;
+	color: white;
+	border: none;
+	outline: none;
+	margin: 0;
+	border: 0;
+	padding: 0;
+	width: 100%;
+}

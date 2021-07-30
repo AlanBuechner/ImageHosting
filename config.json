@@ -1,11 +1,11 @@
 {
 	"db" : {
-		"uri" : "mongodb://localhost/ImageHosting"
+		"uri" : "postgresql://postgres:Senpai43@localhost:5432/ImageHosting"
 	},
 	"session" :{
 		"name" : "sid",
 		"secret" : "secret",
-		"timeout" : 360000000
+		"timeout" : 3600000
 	},
 	"look" : {
 		"title" : "Image Hosting"

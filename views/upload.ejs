@@ -10,8 +10,13 @@
 		<!-- cdns -->
 		<%- include('./cdns.ejs')%>
 
+		<link rel="stylesheet" href="css/tags.css">
 		<link rel="stylesheet" href="css/upload.css">
 		<link rel="stylesheet" href="css/mainStyle.css">
+
+		<script src="js/upload.js"></script>
+		<script src="js/tags.js"></script>
+		<script src="js/fileExtensions.js"></script>
 	</head>
 
 	<body>
@@ -19,13 +24,17 @@
 		<%- include('./header.ejs') %>
 
 		<div id="container">
-			<form id="uploadContainer" method="POST" action="upload" enctype="multipart/form-data">
-				<label id="uploadLable">
-					<input type="file" name="image" accept="image/*">
-					select image
-				</label>
-				<input type="submit" value="upload">
-			</form>
+			<div id="uploadContainer">
+				<div id="error"></div>
+				<div id="uploadFiles">
+				</div>
+
+				<div class="button" id="addNewFile">Add New Image</div>
+
+				<div class="tags"></div>
+
+				<div class="button" id="upload">Upload</div>
+			</div>
 		</div>
 	</body>
 </html>

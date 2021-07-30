@@ -3,7 +3,7 @@
 	display: grid;
 	grid-template-columns: repeat(4, 1fr);
 	grid-auto-rows: minmax(15vw, 0px);
-	grid-gap: 0.5rem;
+	grid-gap: 1vw;
 }
 
 #gallery .image
@@ -12,7 +12,7 @@
 	width: 100%;
 }
 
-#gallery .image img
+#gallery .image .media
 {
 	height: 100%;
 	width: 100%;
@@ -20,7 +20,7 @@
 	transition: 500ms;
 }
 
-#gallery .image img:hover
+#gallery .image .media:hover
 {
 	transform: scale(1.04);
 	box-shadow: 0 12px 16px 0 rgba(0,0,0,0.50),0 17px 50px 0 rgba(0,0,0,0.19);
@@ -41,23 +41,20 @@
 	top: 0;
 	width: 100%;
 	height: 100%;
-	padding-left: 5%;
-	padding-right: 5%;
+	max-height: 40rem;
 	justify-content: center;
 	text-align: center;
-}
 
-.carousel .track-container .track .slide img
-{
-	width: 100%;
-	height: 100%;
-	object-fit: contain;
+	--scroll_button_width: 15%;
+	--track_width: calc(100% - (var(--scroll_button_width)*2));
 }
 
 .carousel .track-container
 {
-	background-color: transparent;
+	background-color: #222;
 	height: 100%;
+	width: var(--track_width);
+	margin: auto;
 	position: relative;
 	overflow: hidden;
 }
@@ -78,6 +75,20 @@
 	width: 100%;
 }
 
+.carousel .track-container .track .slide img
+{
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+
+.carousel .track-container .track .slide video
+{
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+
 .carousel button
 {
 	padding: 0;
@@ -85,97 +96,43 @@
 	position: absolute;
 	top: 0;
 	height: 100%;
-	width: 20%;
 	background: transparent;
 	cursor: pointer;
 	outline: none;
 	z-index: 1000;
+
+	color: rgb(78, 78, 78);
+	font-size: 5rem;
 }
 
 .carousel .btn-left
 {
 	left: 0px;
+	width: var(--scroll_button_width);
 }
 
 .carousel .btn-right
 {
 	right: 0px;
+	width: var(--scroll_button_width);
 }
 
 .carousel .nav
 {
-	width: 100%;
+	width: var(--track_width);
+	margin: auto;
 	display: grid;
 	grid-template-columns: 80% 20%;
 }
 
 .carousel .nav .tags
 {
-	width: 100%;
-	position: relative;
 	left: 10%;
-	width: auto;
-	display: inline-block;
-}
-
-.carousel .nav .tags .tag
-{
-	position: relative;
-	float: left;
-	background: transparent;
-	vertical-align: center;
-	height: 28px;
-	border: 2px solid #17a2b8;
-	border-radius: 15px;
-	padding-left: 7.5px;
-	padding-right: 27px;
-	margin: 5px;
-	transition: 0.5s;
-	cursor: pointer;
-	display: inline-block;
-}
-
-.carousel .nav .tags .tag p
-{
-	margin: 0;
-	float: left;
-}
-
-.carousel .nav .tags .tag .tag_btn
-{
-	position: absolute;
-	right: 0;
-	padding-right: 7.5px;
-	padding-left: 7.5px;
-	height: 100%;
-	margin: 0;
-}
-
-.carousel .nav .tags .tag .tag_btn img
-{
-	height: 50%;
-	object-fit: fill;
-}
-
-.carousel .nav .tags .tag .newTag
-{
-	display: none;
-	float: left;
-	width: 0;
-}
-
-.carousel .nav .tags .tag .newTag input
-{
-	background: transparent;
-	color: white;
-	border: none;
-	outline: none;
-	width: 100%;
 }
 
 .carousel #delete
 {
-	float: right;
+	justify-self: center;
 	height: 38px;
 	width: 38px;
 	padding: 5px;
@@ -185,6 +142,12 @@
 	border: 2px solid transparent;
 	background: transparent;
 	border-radius: 5px;
+}
+
+.carousel #delete img
+{
+	width: 100%;
+	height: 100%;
 }
 
 .carousel #delete:hover

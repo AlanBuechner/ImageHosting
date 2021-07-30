@@ -1,7 +1,7 @@
 const express = require('express');
 const session = require('express-session');
 const multer = require('multer');
-const bodyParser = require('body-parser');
+const ffmpeg  = require('ffmpeg');
 const path = require('path');
 const crypto = require('crypto');
 const fs = require('fs');
@@ -30,6 +30,13 @@ const canAccess = function(req, res, next)
 	}
 }
 
+function isVideo(filename)
+{
+	const filetypes = /mp4/;
+	const extname = filetypes.test(path.extname(filename).toLowerCase());
+	return extname;
+}
+
 const storage = multer.diskStorage({
 	destination: function(req, file, cb){
 		cb(null, './users/'+req.session.userId+'/');
@@ -40,7 +47,7 @@ const storage = multer.diskStorage({
 });
 
 function checkFileType(file, cb){
-	const filetypes = /jpeg|jpg|png|gif/;
+	const filetypes = /jpeg|jpg|jfif|png|gif|mp4/;
 	const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
 
 	const mimetype = filetypes.test(file.mimetype);
@@ -49,7 +56,7 @@ function checkFileType(file, cb){
 		return cb(null, true);
 	}
 	else{
-		cb('Error: Imgaes Only', false);
+		cb('Error: Imgaes and Videos Only', false);
 	}
 }
 
@@ -58,7 +65,10 @@ const upload = multer({
 	fileFilter: function(req, file, cb){
 		checkFileType(file, cb);
 	}
-}).single('image');
+}).array('image');
+
+
+// ------------------------- create application ------------------------- //
 
 // create express app
 const app = express();
@@ -69,7 +79,8 @@ app.set('view engine', 'ejs');
 
 app.listen(port);
 
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // sessions
 app.use(session({
@@ -81,10 +92,6 @@ app.use(session({
 	cookie: {
 		maxAge: config.session.timeout
 	}
-}));
-
-app.use(bodyParser.urlencoded({
-	extended: true
 }));
 
 app.use(function(req, res, next){
@@ -103,27 +110,65 @@ app.use('/js', express.static('js'));
 app.use('/public', express.static('public'));
 app.use('/images', redirectLogin, canAccess, express.static("users"));
 
+// ------------------------- end create application ------------------------- //
+
+// evaluates the expression into a list of images
 async function EvaluateExpression(userID, expression)
 {
-	const files = await users.GetAllImagesFromTag(userID, expression);
-	var response = [];
-	for(i = 0; i < files.length; i++){
-		tags = await users.GetAllTagsFromImage(userID, files[i]);
-		await tags.splice(0,1);
-		response.push({
-			name: files[i],
-			tags: tags
-		});
-	}
-	return response;
+	return (await users.GetTagImagesFromName(userID, expression)).sort().reverse();
 }
+
+
+// ------------------------- get info ------------------------- //
 
 // get the list of files
 app.get('/files', redirectLogin, async function(req, res){
 	const userID = await req.session.userId;
 	const expression = await req.query['expression'];
 	const response = await EvaluateExpression(userID, expression);
-	res.send({files: response, userID: req.session.userId});
+	res.send({files: response, userID: userID});
+});
+
+app.get('/imageName', redirectLogin, async function(req, res){
+	const userID = await req.session.userId;
+	const imageID = await req.query['imageID'];
+	const response = await users.GetImageNameFromID(userID, imageID);
+	res.send({name: response, userID: userID});
+});
+
+app.get('/imageTagNames', redirectLogin, async function(req, res){
+	const userID = await req.session.userId;
+	const imageID = await req.query['imageID'];
+	if(imageID != null){
+		const imageTags = await users.GetImageTagsFromID(userID, imageID);
+		const response = await users.GetTagNamesFromIDs(userID, imageTags);
+		res.send({tags:response, userID: userID});
+	}else{
+		res.send({tags: [], userID: userID})
+	}
+});
+
+// ------------------------- end get info ------------------------- //
+
+
+// ------------------------- pages ------------------------- //
+
+// login page
+app.get('/login', function(req, res){
+	params = { "title" : config.look.title, "error" : "" };
+	if(req.query['error']){
+		params['error'] = req.query['error'];
+	}
+	res.render('login', params);
+});
+
+// register page
+app.get('/register', function(req, res){
+	params = { "title" : config.look.title, "error" : "" };
+	if(req.query['error']){
+		params['error'] = req.query['error'];
+	}
+	res.render('register', params);
 });
 
 // home page
@@ -147,23 +192,78 @@ app.get('/upload', redirectLogin, function(req, res){
 	res.render('upload', {"title" : config.look.title, "active" : "upload"});
 });
 
-app.post('/upload', redirectLogin, upload, function(req, res){
+
+// account page
+app.get('/account', redirectLogin, function(req, res){
+	res.render('account', {"title": config.look.title, "active": "account"});
+});
+
+// ------------------------- end pages ------------------------- //
+
+
+
+
+// ------------------------- images and tags ------------------------- //
+
+// upload an image
+app.post('/upload', redirectLogin, upload, async function(req, res){
 	// add image to user tags
-	const filename = req.file.filename;
+	const userID = req.session.userId;
+	
+	let imageIDs = [];
+	for(let i = 0; i < req.files.length; i++){
+		const fileName = await req.files[i].filename;
+		const path = req.files[i].path;
+		if(isVideo(fileName))
+		{
+			const thumbnailName = fileName.substring(0, fileName.length-3);
+			const conf = {
+				start_time				: 0,		// Start time to recording
+				duration_time			: 1,		// Duration of recording
+				frame_rate				: 1,		// Number of the frames to capture in one second
+				size					: null,		// Dimension each frame
+				number					: 1,		// Total frame to capture
+				every_n_frames			: null,		// Frame to capture every N frames
+				every_n_seconds			: null,		// Frame to capture every N seconds
+				every_n_percentage		: null,		// Frame to capture every N percentage range
+				keep_pixel_aspect_ratio	: true,		// Mantain the original pixel video aspect ratio
+				keep_aspect_ratio		: true,		// Mantain the original aspect ratio
+				padding_color			: 'black',	// Padding color
+				file_name				: thumbnailName,		// File name
+			};
 
-	users.AddImageToTag(req.session.userId, filename, "all");
+			try{
+				let proc = await new ffmpeg(path);
+				proc.fnExtractFrameToJPG("users/"+userID. conf);
+			}
+			catch(e){
+				console.log(e.code);
+				console.log(e.msg);
+			}
+		}
+		
+		imageIDs.push(await users.CreateImage(userID, fileName));
 
-	res.redirect('./upload');
+	}
+
+	let tags = ["all"];
+	tags = tags.concat(JSON.parse(req.query["tags"] ? req.query["tags"] : "[]"));
+
+	users.AddImageTagRelations(userID, imageIDs, tags);
+
+	res.send('success');
 });
 
 // delete images
-app.delete('/removeImage', redirectLogin, function(req, res){
-	const filename = req.query['filename'];
+app.delete('/removeImage', redirectLogin, async function(req, res){
+	const userID = await req.session.userId;
+	const imageID = req.query['imageID'];
+	let filename = await users.GetImageNameFromID(userID, imageID);
 	// remove image from database
-	users.RemoveImage(req.session.userId, filename);
+	users.RemoveImage(userID, imageID);
 
 	// delete image form files
-	fs.unlink('users/'+req.session.userId+'/'+filename, function(err){
+	fs.unlink('users/'+userID+'/'+filename, function(err){
 		if(err){
 			console.log(err);
 		}
@@ -172,55 +272,63 @@ app.delete('/removeImage', redirectLogin, function(req, res){
 	res.send('success');
 });
 
+
+
 // add tags
 app.put('/addTag', redirectLogin, function(req, res){
-	users.AddImageToTag(req.session.userId, req.query['filename'], req.query['tag']);
+	users.AddImageTagRelation(req.session.userId, req.query['imageID'], req.query['tag']);
 	res.send('success');
 });
 
 // remove tags
-app.delete('/removeTag', redirectLogin, function(req, res){
-	users.RemoveImageFromTag(req.session.userId, req.query['filename'], req.query['tag']);
-	res.send('success');
-});
-
-// login page
-app.get('/login', function(req, res){
-	params = { "title" : config.look.title, "error" : "" };
-	if(req.query['error']){
-		params['error'] = req.query['error'];
+app.delete('/removeTag', redirectLogin, async function(req, res){
+	const userID = await req.session.userId;
+	const imageID = req.query['imageID'];
+	const tag = req.query['tag'];
+	if(tag != "all"){
+		users.RemoveImageTagRelation(userID, imageID, tag);
+		res.send('success');
 	}
-	res.render('login', params);
+	else{
+		res.send('cant remove tag "all".');
+	}
 });
 
+// ------------------------- end images and tags ------------------------- //
+
+
+
+
+// ------------------------- user auth ------------------------- //
+
+// login
 app.post('/login', async function(req, res){
 	// check username
 	const username = req.body.username;
-	const hashedPassword = await hash(req.body.password);
+	const hashedPassword = hash(req.body.password);
 
-	users.GetUserByName(username, function(result){
-		if(result == null){
-			console.log('user ' + username + ' not found');
-			res.redirect('/login?error=error.auth.UserNotFound');
+	let user = await users.GetUserByName(username);
+	if(user == null){
+		console.log('user ' + username + ' not found');
+		res.redirect('/login?error=error.auth.UserNotFound');
+	}
+	else{
+		if(user.password == hashedPassword){
+			// login user
+			console.log('loged in user ' + user.username);
+
+			req.session.userId = user.id;
+			res.redirect('/');
 		}
 		else{
-			if(result.password == hashedPassword){
-				// login user
-				console.log('loged in user ' + result.username);
-
-				req.session.userId = result._id;
-				res.redirect('/');
-			}
-			else{
-				res.redirect('/login?error=error.auth.WrongPassword');
-				console.log('wrong password');
-			}
+			res.redirect('/login?error=error.auth.WrongPassword');
+			console.log('wrong password');
 		}
-	});
+	}
 });
 
 // logout
-app.post('/logout', redirectLogin, function(req, res){
+function logout(req, res){
 	req.session.destroy(function(err){
 		if(err){
 			return res.redirect('/login');
@@ -229,18 +337,11 @@ app.post('/logout', redirectLogin, function(req, res){
 
 		res.redirect('/login');
 	});
-});
+}
+app.post('/logout', redirectLogin, logout);
 
-// register page
-app.get('/register', function(req, res){
-	params = { "title" : config.look.title, "error" : "" };
-	if(req.query['error']){
-		params['error'] = req.query['error'];
-	}
-	res.render('register', params);
-});
-
-app.post('/register', function(req, res){
+// register
+app.post('/register', async function(req, res){
 
 	const username = req.body.username;
 	const email = req.body.email;
@@ -256,44 +357,45 @@ app.post('/register', function(req, res){
 	else
 	{
 		// check if the username is alredy used
-		users.GetUserByName(username, function(user){
-			if(user != null)
-			{
-				console.log('username is taken');
-				res.redirect('/register?error=error.auth.UsernameTaken');
-			}
-			else
-			{
-				// check if the email is being used
-				users.GetUserByEmail(email, async function(user){
-					if(user != null)
-					{
-						console.log('email is alredy used');
-						res.redirect('/register?error=error.auth.EmailUsed');
-					}
-					else
-					{
-						// add user to the database
-						users.AddUser(
-							req.body.username,
-							req.body.email,
-							hashedPassword,
-							function(result){
-								if(!result.success)
-								{
-									res.redirect('/register?error=error.auth.CouldNotCreateUser');
-								}
-								else
-								{
-									res.redirect('/login');
-								}
-						});
-					}
-				});
-			}
+		let user = await users.GetUserByName(username);
+		if(user != null)
+		{
+			console.log('username is taken');
+			res.redirect('/register?error=error.auth.UsernameTaken');
+			return;
+		}
+
+		// check if the email is being used
+		user = await users.GetUserByEmail(email);
+		if(user != null)
+		{
+			console.log('email is alredy used');
+			res.redirect('/register?error=error.auth.EmailUsed');
+			return;
+		}
+
+		// add user to the database
+		users.AddUser(
+			req.body.username,
+			req.body.email,
+			hashedPassword,
+			function(result){
+				if(!result.success)
+					res.redirect('/register?error=error.auth.CouldNotCreateUser');
+				else
+					res.redirect('/login');
 		});
 	}
 });
+
+app.delete('/deleteUser', redirectLogin, async function(req, res){
+	const userID = await req.session.userId;
+	console.log("deleting user "+userID);
+	users.DeleteUser(userID);
+	logout(req, res);
+});
+
+// ------------------------- end user auth ------------------------- //
 
 app.use(function(req, res){
 	res.status(404).render('error404', {page: req.url});

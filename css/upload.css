@@ -6,22 +6,89 @@
 	display: block;
 }
 
-#uploadContainer input, #uploadContainer label
+#uploadContainer #error{
+	color: red;
+}
+
+.uploadImage
+{
+	display: grid;
+	grid-template-columns: 1fr 2fr 1fr;
+	justify-items: stretch;
+	margin: auto;
+}
+
+.remove
+{
+	justify-self: start;
+	text-align: left;
+	padding-top: 20px;
+	padding-left: 20px;
+	transition: 0.5s;
+	cursor: pointer;
+}
+
+.remove:hover
+{
+	color: red;
+}
+
+.button
 {
 	display: block;
+	margin:auto;
+	border: none;
+	padding: 15px;
+	border-radius: 10px;
+	width: 50%;
+	color: #cccccc;
+	background-color: #222;
+	font-size: medium;
+	cursor: pointer;
+}
+
+#uploadContainer label
+{
+	display: inline-block;
 	padding: 5px;
-	margin: auto;
 	margin-top: 10px;
 	margin-bottom: 10px;
 	border: none;
-	width: 50vh;
+	width: auto;
 	border-radius: 10px;
 	color: #cccccc;
 	background-color: #222;
 	font-size: medium;
 }
 
+#uploadContainer label p
+{
+	margin: 0;
+	padding: 5px;
+}
+
 #uploadContainer input[type="file"]
 {
 	display: none;
+}
+
+.imagePreview
+{
+	display: flex;
+
+	border-radius: 7px;
+
+	width: 100%;
+	object-fit: contain;
+
+	text-align: center;
+	align-items: center;
+	justify-content: center;
+	font-weight: bold;
+	color: #ccc;
+}
+
+.tags
+{
+	display: inline-block;
 }
