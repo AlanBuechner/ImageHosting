@@ -33,7 +33,10 @@ const db = new Client({
 db.connect()
 .then(async ()=>{
 	console.log("connected to postgresql");
-}).catch(e=>console.log(e));
+}).catch(e=>{
+	console.log("faild to connect to postgresql");
+	console.log(e)
+});
 
 
 async function query(sql, values){
