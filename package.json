@@ -1,0 +1,33 @@
+{
+  "dependencies": {
+    "connect-pg-simple": "^6.2.1",
+    "crypto": "^1.0.1",
+    "ejs": "^3.1.6",
+    "express": "^4.17.1",
+    "express-session": "^1.17.2",
+    "ffmpeg": "^0.0.4",
+    "multer": "^1.4.2",
+    "nodemon": "^2.0.12",
+    "npm": "^7.20.3",
+    "pg": "^8.7.1",
+    "uuid": "^8.3.2",
+    "uuid-int": "^3.1.0"
+  },
+  "name": "imagehosting",
+  "description": "",
+  "version": "1.0.0",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlanBuechner/ImageHosting.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AlanBuechner/ImageHosting/issues"
+  },
+  "homepage": "https://github.com/AlanBuechner/ImageHosting#readme"
+}
