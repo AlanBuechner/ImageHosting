@@ -1,8 +1,10 @@
 const {Pool, Client} = require('pg');
 const UUID = require('uuid-int');
+const { v4: uuidv4} = require('uuid');
 const session = require('express-session');
 const pgSessionStore = require('connect-pg-simple')(session);
 const fs = require('fs');
+const random = require('random-bigint');
 const config = require('./config');
 
 function userUUID(){
@@ -10,11 +12,11 @@ function userUUID(){
 }
 
 function imageUUID(){
-	return Date.now();
+	return uuidv4();
 }
 
 function tagUUID(){
-	return Date.now();
+	return uuidv4();
 }
 
 // ------------------------- create connectiont to database ------------------------- //
@@ -58,8 +60,8 @@ async function AddUser(username, email, password, callback)
 			return;
 		}
 
-		await db.query("create table Tags" + uuid + "(id bigint not null, name varchar(255) not null, images bigint[] not null, primary key(id))"); // add a tages table
-		await db.query("create table Images" + uuid + "(id bigint not null, name varchar(255) not null, tags bigint[] not null, primary key(id))"); // add a images table
+		await db.query("create table Tags" + uuid + "(id uuid not null, name varchar(255) not null, images uuid[] not null, primary key(id))"); // add a tages table
+		await db.query("create table Images" + uuid + "(id uuid not null, name varchar(255) not null, tags uuid[] not null, primary key(id))"); // add a images table
 
 		// create a folder for the user
 		fs.mkdir("users/"+uuid, function(err){
@@ -142,7 +144,7 @@ async function ImageExists(userID, name)
 // checks if a image exists
 async function ImageExistsFromID(userID, imageID)
 {
-	let result = await query("select id from Images"+userID+" where id = '"+imageID+"'");
+	let result = await query("select id from Images"+userID+" where id = uuid('"+imageID+"')");
 	return result.length != 0;
 }
 
@@ -199,7 +201,7 @@ async function RemoveImage(userID, imageID)
 	let tags = await GetTagNamesFromIDs(userID, tagIDs);
 
 	// remove image from the images array
-	query("delete from Images"+userID+" where id = '"+imageID+"'");
+	query("delete from Images"+userID+" where id = uuid('"+imageID+"')");
 
 	// remove the image from all the tags images array
 	for(let i = 0; i < (await tags).length; i++){
@@ -229,17 +231,17 @@ async function GetTagImagesFromName(userID, name){
 
 // get the tag from the id
 async function GetTagFromID(userID, tagID){
-	return (await query("select * from Tags"+userID+" where id = '"+tagID+"'"))[0];
+	return (await query("select * from Tags"+userID+" where id = uuid('"+tagID+"')"))[0];
 }
 
 // get the name from the id
 async function GetTagNameFromID(userID, tagID){
-	return (await query("select name from Tags"+userID+" where id = '"+tagID+"'"))[0].name;
+	return (await query("select name from Tags"+userID+" where id = uuid('"+tagID+"')"))[0].name;
 }
 
 async function GetTagNamesFromIDs(userID, tagIDs){
 	let tags = [];
-	let result = await query("select name from Tags"+userID+" where id in ("+tagIDs.join(",")+")");
+	let result = await query("select name from Tags"+userID+" where id in (uuid('"+tagIDs.join("'),uuid('")+"'))");
 	for(let i = 0; i < result.length; i++){
 		tags.push(result[i].name);
 	}
@@ -248,24 +250,24 @@ async function GetTagNamesFromIDs(userID, tagIDs){
 
 // get the images from the id
 async function GetTagImagesFromID(userID, tagID){
-	return (await query("select images from Tags"+userID+" where id = '"+tagID+"'"))[0].images;
+	return (await query("select images from Tags"+userID+" where id = uuid('"+tagID+"')"))[0].images;
 }
 
 // ---------------------------- get image info from id ----------------------------
 
 // get the image from the id
 async function GetImageFromID(userID, imageID){
-	return (await query("select * from Images"+userID+" where id = '"+imageID+"'"))[0];
+	return (await query("select * from Images"+userID+" where id = uuid('"+imageID+"')"))[0];
 }
 
 // get the name from the id
 async function GetImageNameFromID(userID, imageID){
-	return (await query("select name from Images"+userID+" where id = '"+imageID+"'"))[0].name;
+	return (await query("select name from Images"+userID+" where id = uuid('"+imageID+"')"))[0].name;
 }
 
 // get the tags from the id
 async function GetImageTagsFromID(userID, imageID){
-	let result = (await query("select tags from Images"+userID+" where id = '"+imageID+"'"))[0];
+	let result = (await query("select tags from Images"+userID+" where id = uuid('"+imageID+"')"))[0];
 	return result == null ? [] : result.tags;
 }
 
@@ -278,7 +280,7 @@ async function AddImageTagRelation(userID, imageID, tag)
 	let tagID = await CreateTag(userID, tag);
 
 	// add the tag to the image
-	query("update Images"+userID+" set tags = array_append(tags, "+tagID+") where id = '"+imageID+"'");
+	query("update Images"+userID+" set tags = array_append(tags, uuid('"+tagID+"')) where id = uuid('"+imageID+"')");
 
 	// add the image to the tag
 	query("update Tags"+userID+" set images = array_append(images, "+imageID+") where id = '"+tagID+"'");
@@ -294,10 +296,10 @@ async function AddImageTagsRelation(userID, imageID, tags)
 	}
 
 	// add the tag to the image
-	query("update Images"+userID+" set tags = array_cat(tags, array["+tagIDs.join(",")+"]) where id = '"+imageID+"'");
+	query("update Images"+userID+" set tags = array_cat(tags, array["+tagIDs.join(",")+"]) where id = uuid('"+imageID+"')");
 
 	// add the image to the tag
-	query("update Tags"+userID+" set images = array_append(images, "+imageID+") where id in ("+tagIDs.join(",")+")");
+	query("update Tags"+userID+" set images = array_append(images, uuid('"+imageID+"')) where id in (uuid('"+tagIDs.join("'),uuid('")+"'))");
 }
 
 // addes a image tag relation
@@ -308,12 +310,13 @@ async function AddImageTagRelations(userID, imageIDs, tags)
 	for(let i = 0; i < tags.length; i++){
 		tagIDs.push(await(CreateTag(userID, tags[i])));
 	}
-
+	
+	
 	// add the tag to the image
-	query("update Images"+userID+" set tags = array_cat(tags, array["+tagIDs.join(",")+"]) where id in ("+imageIDs.join(",")+")");
-
+	query("update Images"+userID+" set tags = array_cat(tags, array[uuid('"+tagIDs.join("'),uuid('")+"')]) where id in (uuid('"+imageIDs.join("'),uuid('")+"'))");
+	
 	// add the image to the tag
-	query("update Tags"+userID+" set images = array_cat(images, array["+imageIDs.join(",")+"]) where id in ("+tagIDs.join(",")+")");
+	query("update Tags"+userID+" set images = array_cat(images, array[uuid('"+imageIDs.join("'),uuid('")+"')]) where id in (uuid('"+tagIDs.join("'),uuid('")+"'))");
 }
 
 // removes an image from a tag
@@ -332,7 +335,7 @@ async function RemoveImageTagRelation(userID, imageID, tag)
 		let index = tags.indexOf(tagID);
 		if (index > -1){
 			tags.splice(index, 1);
-			query("update Images"+userID+" set tags = '{"+tags.join(',')+"}' where id = '"+imageID+"'");
+			query("update Images"+userID+" set tags = '{uuid('"+tags.join("'),uuid('")+"')}' where id = uuid('"+imageID+"')");
 		}
 	}
 
@@ -342,7 +345,7 @@ async function RemoveImageTagRelation(userID, imageID, tag)
 	index = images.indexOf(imageID);
 	if(index > -1){
 		images.splice(index, 1);
-		query("update Tags"+userID+" set images = '{"+images.join(',')+"}' where id = '"+tagID+"'");
+		query("update Tags"+userID+" set images = '{uuid("+images.join("'),uuid('")+"')}' where id = uuid('"+tagID+"')");
 	}
 
 }

@@ -250,7 +250,6 @@ app.post('/upload', redirectLogin, upload, async function(req, res){
 	tags = tags.concat(JSON.parse(req.query["tags"] ? req.query["tags"] : "[]"));
 
 	users.AddImageTagRelations(userID, imageIDs, tags);
-
 	res.send('success');
 });
 
