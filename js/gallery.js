@@ -140,7 +140,9 @@ $(document).ready(async function(){
 	}
 
 	const imagesPerRow = 4;
-	const imagesPerPage = 1*imagesPerRow;
+	const rowsPerPag = 3;
+	const imagesPerPage = rowsPerPag*imagesPerRow;
+	const pageHeight = rowsPerPag * 16;
 	const numPages = Math.ceil(data.files.length / imagesPerPage);
 	currentPage = 0;
 
@@ -163,21 +165,21 @@ $(document).ready(async function(){
 			const images = GetPage(pageToLoad);
 			await AppendImagesBack(images);
 
-			topPadding -= 16;
+			topPadding -= pageHeight;
 		}
 		else if(pageToLoad >= currentPage)
 		{
 			const images = GetPage(pageToLoad);
 			await AppendImagesFront(images);
 
-			bottomPadding -= 16;
+			bottomPadding -= pageHeight;
 		}
 
 		if(topPadding < 0) topPadding = 0;
 		if(bottomPadding < 0) bottomPadding = 0;
 
-		$('#gallery').css({"padding-top": topPadding + "vw"});
-		$('#gallery').css({"padding-bottom": bottomPadding + "vw"});
+		$('#TopPadding').css({"height": topPadding + "vw"});
+		$('#BottomPadding').css({"height": bottomPadding + "vw"});
 	}
 
 	async function UnloadPage(page)
@@ -193,18 +195,18 @@ $(document).ready(async function(){
 			gc.slice(0, imagesPerPage).remove();
 			tc.slice(0, imagesPerPage).remove();
 			
-			topPadding += 16;
+			topPadding += pageHeight;
 		}
 		else if(page > currentPage)
 		{
 			gc.slice(imagesPerPage*2, gc.length).remove();
 			tc.slice(imagesPerPage*2, gc.length).remove();
 
-			bottomPadding += 16;
+			bottomPadding += pageHeight;
 		}
 		
-		$('#gallery').css({"padding-top": topPadding + "vw"});
-		$('#gallery').css({"padding-bottom": bottomPadding + "vw"});
+		$('#TopPadding').css({"height": topPadding + "vw"});
+		$('#BottomPadding').css({"height": bottomPadding + "vw"});
 		
 	}
 
@@ -227,9 +229,27 @@ $(document).ready(async function(){
 		currentPage--;
 		await LoadPage(currentPage-1);
 	}
-
+	
 	await LoadPage(0);
 	await LoadPage(1);
+
+	const options = {
+		rootMargin: "10px"
+	};
+
+	const nextobserver = new IntersectionObserver(async function(entries, o)
+	{
+		NextPage();
+	}, options);
+
+	const lastobserver = new IntersectionObserver(async function(entries, o)
+	{
+		LastPage();
+	}, options);
+
+	//lastobserver.observe($('#TopPadding')[0]);
+	nextobserver.observe($('#BottomPadding')[0]);
+
 
 	$(window).on('hashchange', function(){
 		if(window.location.hash != imageViewOpenHash){
