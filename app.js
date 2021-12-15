@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const users = require('./users');
 const config = require('./config');
+const { isFunction } = require('util');
 
 function hash(text)
 {
@@ -115,7 +116,7 @@ app.use('/images', redirectLogin, canAccess, express.static("users"));
 // evaluates the expression into a list of images
 async function EvaluateExpression(userID, expression)
 {
-	return (await users.GetTagImagesFromName(userID, expression)).sort().reverse();
+	return (await users.GetTagImagesFromName(userID, expression));
 }
 
 
@@ -249,8 +250,11 @@ app.post('/upload', redirectLogin, upload, async function(req, res){
 	let tags = ["all"];
 	tags = tags.concat(JSON.parse(req.query["tags"] ? req.query["tags"] : "[]"));
 
-	users.AddImageTagRelations(userID, imageIDs, tags);
-	res.send('success');
+	if(imageIDs.length != 0)
+	{
+		users.AddImageTagRelations(userID, imageIDs, tags);
+		res.send('success');
+	}
 });
 
 // delete images

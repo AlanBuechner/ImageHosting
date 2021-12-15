@@ -64,7 +64,15 @@ async function AddUser(username, email, password, callback)
 		}
 
 		await db.query("create table Tags" + uuid + "(id uuid not null, name varchar(255) not null, images uuid[] not null, primary key(id))"); // add a tages table
-		await db.query("create table Images" + uuid + "(id uuid not null, name varchar(255) not null, tags uuid[] not null, primary key(id))"); // add a images table
+		await db.query(`
+			create table Images${uuid.toString()} (
+				id uuid not null, 
+				name varchar(255) not null, 
+				tags uuid[] not null, 
+				uploadTime timestamp without time zone not null, 
+				primary key(id)
+			)
+		`); // add a images table
 
 		// create a folder for the user
 		fs.mkdir("users/"+uuid, function(err){
@@ -187,11 +195,11 @@ async function CreateImage(userID, name)
 		console.log("createing image " + name);
 		// create a id for the new tag
 		id = imageUUID();
-		await query("insert into Images"+userID+" values($1, $2, $3)", [id, name, []]); // add new image to images
+		await query("insert into Images"+userID+" values($1, $2, $3, CURRENT_TIMESTAMP)", [id, name, []]); // add new image to images
 	}
 	else{
 		// get the id for the tag
-		id = (await query("select id from Images"+userID+" where name = '"+name+"'"))[0].id;
+		id = (await query("select id from Images"+userID+" where name = '"+name+"' order by uploadTime"))[0].id;
 	}
 	return id;
 }

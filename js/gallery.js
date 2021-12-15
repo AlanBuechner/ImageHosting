@@ -250,7 +250,6 @@ $(document).ready(async function(){
 	//lastobserver.observe($('#TopPadding')[0]);
 	nextobserver.observe($('#BottomPadding')[0]);
 
-
 	$(window).on('hashchange', function(){
 		if(window.location.hash != imageViewOpenHash){
 			toggleImageView(false);
