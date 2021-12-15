@@ -4,6 +4,7 @@ $(document).ready(async function(){
 
 	data = {};
 
+	// get a list of all the uuids for the images
 	await $.ajax({
 		type: 'GET',
 		url: '/files?expression='+params.get('search'),
@@ -12,6 +13,7 @@ $(document).ready(async function(){
 		}
 	});
 
+	// get the images file name and extention
 	async function GetImageName(imageID){
 		if(imageID == null)
 			return null;
@@ -27,6 +29,7 @@ $(document).ready(async function(){
 		return info;
 	}
 
+	// get the list of tags for an image
 	async function GetImageTags(imageID){
 		if(imageID == null)
 			return null;
@@ -41,8 +44,6 @@ $(document).ready(async function(){
 		});
 		return info;
 	}
-
-	console.log(data);
 
 	// gallery controls
 	var imageViewOpen = false;
@@ -66,6 +67,7 @@ $(document).ready(async function(){
 		imageViewOpen = val
 	}
 
+	// generate the gallery html for the new images
 	async function GenGalleryPageHtml(images)
 	{
 		var galleryhtml = "";
@@ -85,6 +87,7 @@ $(document).ready(async function(){
 		return galleryhtml;
 	}
 
+	// generate the track html for the new images
 	async function GenTrackPageHtml(images){
 		var carouselhtml = $('.track').html();
 		if(images.length > 0){
@@ -103,8 +106,29 @@ $(document).ready(async function(){
 		return carouselhtml;
 	}
 
-	function UpdateImageEvents()
+	const imagesPerRow = 4;
+	rowsPerPag = Math.ceil(window.innerHeight/(0.16*window.innerWidth));
+	const imagesPerPage = rowsPerPag*imagesPerRow;
+	const numPages = Math.ceil(data.files.length / imagesPerPage);
+	loadedPages = 0;
+
+	$(window).resize(function(){
+		rowsPerPag = Math.ceil(window.innerHeight/(0.16*window.innerWidth));
+	});
+
+	async function LoadNextPage()
 	{
+		// check if there are more pages to load
+		if(loadedPages >= numPages)
+			return;
+
+		// get all the images for this page
+		const images = data.files.slice(imagesPerPage*loadedPages, imagesPerPage*(loadedPages+1));
+
+		// add the html for the images
+		$('#gallery').append(await GenGalleryPageHtml(images));
+
+		// update the on click function for all the added images
 		$('.image').on('click', function(){
 			window.location.hash = imageViewOpenHash;
 			activeImage = $('.image').index(this);
@@ -114,124 +138,11 @@ $(document).ready(async function(){
 
 		slides = $('.track').children();
 		imageCount = slides.length;
-	}
 
-	async function AppendImagesBack(images){
-		// add images to galery
-		console.log("loading images: ");
-		console.log(images);
-		var galleryhtml = await GenGalleryPageHtml(images) + $('#gallery').html();
-
-		$('#gallery').html(galleryhtml);
-
-		UpdateImageEvents();
-	}
-
-
-	async function AppendImagesFront(images){
-		// add images to galery
-		console.log("loading images: ");
-		console.log(images);
-		var galleryhtml = $('#gallery').html() + await GenGalleryPageHtml(images);
-
-		$('#gallery').html(galleryhtml);
-
-		UpdateImageEvents();
-	}
-
-	const imagesPerRow = 4;
-	const rowsPerPag = 3;
-	const imagesPerPage = rowsPerPag*imagesPerRow;
-	const pageHeight = rowsPerPag * 16;
-	const numPages = Math.ceil(data.files.length / imagesPerPage);
-	currentPage = 0;
-
-	topPadding = 0;
-	bottomPadding = 0;
-
-	async function LoadPage(pageToLoad)
-	{
-		if(pageToLoad < 0 || pageToLoad >= numPages)
-			return;
-		console.log("loading page: " + (pageToLoad));
-
-
-		function GetPage(page){
-			return data.files.slice(imagesPerPage*page, imagesPerPage*(page+1));
-		}
-
-		if(pageToLoad < currentPage)
-		{
-			const images = GetPage(pageToLoad);
-			await AppendImagesBack(images);
-
-			topPadding -= pageHeight;
-		}
-		else if(pageToLoad >= currentPage)
-		{
-			const images = GetPage(pageToLoad);
-			await AppendImagesFront(images);
-
-			bottomPadding -= pageHeight;
-		}
-
-		if(topPadding < 0) topPadding = 0;
-		if(bottomPadding < 0) bottomPadding = 0;
-
-		$('#TopPadding').css({"height": topPadding + "vw"});
-		$('#BottomPadding').css({"height": bottomPadding + "vw"});
-	}
-
-	async function UnloadPage(page)
-	{
-		if(page < 0 || page >= numPages)
-			return;
-		console.log("unloading page: " + (page));
-		let gc = $('#gallery').children();
-		let tc = $('.track').children();
-
-		if(page < currentPage)
-		{
-			gc.slice(0, imagesPerPage).remove();
-			tc.slice(0, imagesPerPage).remove();
-			
-			topPadding += pageHeight;
-		}
-		else if(page > currentPage)
-		{
-			gc.slice(imagesPerPage*2, gc.length).remove();
-			tc.slice(imagesPerPage*2, gc.length).remove();
-
-			bottomPadding += pageHeight;
-		}
-		
-		$('#TopPadding').css({"height": topPadding + "vw"});
-		$('#BottomPadding').css({"height": bottomPadding + "vw"});
-		
-	}
-
-	NextPage = async function()
-	{
-		if(currentPage == numPages-1)
-			return;
-
-		await UnloadPage(currentPage-1);
-		currentPage++;
-		await LoadPage(currentPage+1);
-	}
-
-	LastPage = async function()
-	{
-		if(currentPage == 0)
-			return;
-
-		await UnloadPage(currentPage+1);
-		currentPage--;
-		await LoadPage(currentPage-1);
+		loadedPages++;
 	}
 	
-	await LoadPage(0);
-	await LoadPage(1);
+	await LoadNextPage();
 
 	const options = {
 		rootMargin: "10px"
@@ -239,16 +150,10 @@ $(document).ready(async function(){
 
 	const nextobserver = new IntersectionObserver(async function(entries, o)
 	{
-		NextPage();
+		await LoadNextPage();
 	}, options);
 
-	const lastobserver = new IntersectionObserver(async function(entries, o)
-	{
-		LastPage();
-	}, options);
-
-	//lastobserver.observe($('#TopPadding')[0]);
-	nextobserver.observe($('#BottomPadding')[0]);
+	nextobserver.observe($('#observer')[0]);
 
 	$(window).on('hashchange', function(){
 		if(window.location.hash != imageViewOpenHash){
