@@ -9,5 +9,6 @@
 	},
 	"look" : {
 		"title" : "Image Hosting"
-	}
+	},
+	"port": 3000
 }

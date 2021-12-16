@@ -7,7 +7,6 @@ const crypto = require('crypto');
 const fs = require('fs');
 const users = require('./users');
 const config = require('./config');
-const { isFunction } = require('util');
 
 function hash(text)
 {
@@ -73,12 +72,11 @@ const upload = multer({
 
 // create express app
 const app = express();
-const port = 3000;
 
 // register view engine
 app.set('view engine', 'ejs');
 
-app.listen(port);
+app.listen(config.port);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
