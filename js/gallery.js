@@ -46,6 +46,7 @@ $(document).ready(async function(){
 	}
 
 	// gallery controls
+	loadedImages = 0;
 	var imageViewOpen = false;
 
 	const imageViewOpenHash = "#image_view_open";
@@ -67,66 +68,67 @@ $(document).ready(async function(){
 		imageViewOpen = val
 	}
 
-	// generate the gallery html for the new images
-	async function GenGalleryPageHtml(images)
-	{
-		var galleryhtml = "";
-		if(images.length > 0){
-			for(i = 0; i < images.length; i++){
-				let name = await GetImageName(images[i]);
-				let video = isVideo(name);
-
-				galleryhtml += `<span class="image">`
-				if(video)
-					galleryhtml += `<video class="media" src="images/${data.userID}/${name}">`;
-				else
-					galleryhtml += 	`<img class="media" src="images/${data.userID}/${name}">`;
-				galleryhtml += `</span>`;
-			}
-		}
-		return galleryhtml;
-	}
-
-	// generate the track html for the new images
-	async function GenTrackPageHtml(images){
-		var carouselhtml = $('.track').html();
-		if(images.length > 0){
-			for(i = 0; i < images.length; i++){
-				let name = await GetImageName(images[i]);
-				let video = isVideo(name);
-
-				carouselhtml += `<li class="slide">`;
-				if(video)
-					carouselhtml += `<video src="images/${data.userID}/${name}" controls>`;
-				else
-					carouselhtml += `<img src="images/${data.userID}/${name}">`;
-				carouselhtml += `</li>`;
-			}
-		}
-		return carouselhtml;
-	}
-
-	const imagesPerRow = 4;
-	rowsPerPag = Math.ceil(window.innerHeight/(0.16*window.innerWidth));
-	const imagesPerPage = rowsPerPag*imagesPerRow;
-	const numPages = Math.ceil(data.files.length / imagesPerPage);
-	loadedPages = 0;
-
-	$(window).resize(function(){
-		rowsPerPag = Math.ceil(window.innerHeight/(0.16*window.innerWidth));
-	});
-
 	async function LoadNextPage()
 	{
 		// check if there are more pages to load
-		if(loadedPages >= numPages)
+		if(loadedImages >= data.files.length)
 			return;
 
-		// get all the images for this page
-		const images = data.files.slice(imagesPerPage*loadedPages, imagesPerPage*(loadedPages+1));
+		// find the number of images to load
+		// imagesToLoad = rows on screen * number of images per row
+		// rows on screen = ceil(windowHeight/imageHeight)
+		imagesToLoad = Math.ceil(window.innerHeight/(0.16*window.innerWidth))*4;
+		
+		// check if we are laoding more images than possible
+		if(loadedImages + imagesToLoad >= data.files.length){
+			// update the number of images to load to be the remaining number of images that are not loaded
+			imagesToLoad = await data.files.length - loadedImages;
+		}
 
-		// add the html for the images
+		// get all the images for this page
+		const images = await data.files.slice(loadedImages, loadedImages+imagesToLoad);
+
+		// generate the gallery html for the new images
+		async function GenGalleryPageHtml(images)
+		{
+			let galleryhtml = "";
+			if(images.length > 0){
+				for(let i = 0; i < images.length; i++){
+					
+					let name = await GetImageName(images[i]);
+					let video = isVideo(name);
+					
+					let html = `<span class="image">`
+					if(video) 	html +=	`<video class="media" src="images/${data.userID}/${name}">`;
+					else 		html +=	`<img class="media" src="images/${data.userID}/${name}">`;
+					html += `</span>`;
+					galleryhtml += html;
+				}
+			}
+			return galleryhtml;
+		}
+
+		// generate the track html for the new images
+		async function GenTrackPageHtml(images){
+			var carouselhtml = $('.track').html();
+			if(images.length > 0){
+				for(let i = 0; i < images.length; i++){
+					let name = await GetImageName(images[i]);
+					let video = isVideo(name);
+
+					carouselhtml += `<li class="slide">`;
+					if(video)
+						carouselhtml += `<video src="images/${data.userID}/${name}" controls>`;
+					else
+						carouselhtml += `<img src="images/${data.userID}/${name}">`;
+					carouselhtml += `</li>`;
+				}
+			}
+			return carouselhtml;
+		}
+		// add the html for the images gallery and track
 		$('#gallery').append(await GenGalleryPageHtml(images));
+		$(".track").append(await GenTrackPageHtml(images));
 
 		// update the on click function for all the added images
 		$('.image').on('click', function(){
@@ -136,21 +138,21 @@ $(document).ready(async function(){
 			updateImageView();
 		});
 
-		slides = $('.track').children();
+		slides = $(".track").children();
 		imageCount = slides.length;
+		updateImageView();
 
-		loadedPages++;
+		// update the number of images loaded
+		loadedImages += imagesToLoad;
 	}
-	
-	await LoadNextPage();
 
 	const options = {
-		rootMargin: "10px"
 	};
 
 	const nextobserver = new IntersectionObserver(async function(entries, o)
 	{
-		await LoadNextPage();
+		if(entries[0].isIntersecting)
+			await LoadNextPage();
 	}, options);
 
 	nextobserver.observe($('#observer')[0]);
@@ -162,16 +164,6 @@ $(document).ready(async function(){
 	});
 
 	// carousel
-
-	updateImageView();
-
-	function getWrapedIndex(index){
-		if(index >= imageCount)
-			index = imageCount-1;
-		if(index < 0)
-			index = 0;
-		return index;
-	}
 
 	async function updateImageView(){
 
@@ -188,7 +180,7 @@ $(document).ready(async function(){
 		activeTags.updateTags(activeTags.tags);
 	}
 
-	function moveImage(amount){
+	async function moveImage(amount){
 		
 		activeSlide = $(slides[activeImage]).children()[0];
 		if(activeSlide.nodeName == "VIDEO")
@@ -197,7 +189,12 @@ $(document).ready(async function(){
 		}
 
 		activeImage += amount;
-		activeImage = getWrapedIndex(activeImage);
+		if(activeImage < 0)
+			activeImage = 0;
+		if(activeImage >= imageCount){
+			await LoadNextPage();
+			activeImage = imageCount-1;
+		}
 
 		updateImageView();
 	};

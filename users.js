@@ -4,7 +4,6 @@ const { v4: uuidv4} = require('uuid');
 const session = require('express-session');
 const pgSessionStore = require('connect-pg-simple')(session);
 const fs = require('fs');
-const random = require('random-bigint');
 const config = require('./config');
 
 function userUUID(){
@@ -289,12 +288,12 @@ async function AddImageTagRelation(userID, imageID, tag)
 {
 	// create a id for the image
 	let tagID = await CreateTag(userID, tag);
-
+	
 	// add the tag to the image
 	query("update Images"+userID+" set tags = array_append(tags, uuid('"+tagID+"')) where id = uuid('"+imageID+"')");
-
+	
 	// add the image to the tag
-	query("update Tags"+userID+" set images = array_append(images, "+imageID+") where id = '"+tagID+"'");
+	query("update Tags"+userID+" set images = array_append(images, uuid('"+imageID+"')) where id = uuid('"+tagID+"')");
 }
 
 // addes a image tag relation
@@ -335,30 +334,14 @@ async function RemoveImageTagRelation(userID, imageID, tag)
 {
 	// get the tag id
 	tagID = await GetTagIDFromName(userID, tag);
-
+	
 	// remove the tag from the image
 	// check if the image existes
-	if(ImageExistsFromID(userID, imageID)){
-		// get the tags from the image
-		let tags = await GetImageTagsFromID(userID, imageID);
-
-		// remove the tag from the array
-		let index = tags.indexOf(tagID);
-		if (index > -1){
-			tags.splice(index, 1);
-			query("update Images"+userID+" set tags = '{uuid('"+tags.join("'),uuid('")+"')}' where id = uuid('"+imageID+"')");
-		}
-	}
-
-
+	if(ImageExistsFromID(userID, imageID))
+		query("update Images"+userID+" set tags = array_remove(tags, uuid('"+tagID+"')) where id = uuid('"+imageID+"')");
+	
 	// remove the image from the tag
-	let images = await GetTagImagesFromID(userID, tagID);
-	index = images.indexOf(imageID);
-	if(index > -1){
-		images.splice(index, 1);
-		query("update Tags"+userID+" set images = '{uuid("+images.join("'),uuid('")+"')}' where id = uuid('"+tagID+"')");
-	}
-
+	query("update Tags"+userID+" set images = array_remove(images, uuid('"+imageID+"')) where id = uuid('"+tagID+"')");
 }
 
 // ------------------------- end images and tags ------------------------- //

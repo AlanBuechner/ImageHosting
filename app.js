@@ -215,7 +215,7 @@ app.post('/upload', redirectLogin, upload, async function(req, res){
 	for(let i = 0; i < req.files.length; i++){
 		const fileName = await req.files[i].filename;
 		const path = req.files[i].path;
-		if(isVideo(fileName))
+		if(isVideo(fileName) && false)
 		{
 			const thumbnailName = fileName.substring(0, fileName.length-3);
 			const conf = {
