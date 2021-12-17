@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const users = require('./users');
 const config = require('./config');
+const console = require('console');
 
 function hash(text)
 {
@@ -248,6 +249,9 @@ app.post('/upload', redirectLogin, upload, async function(req, res){
 	let tags = ["all"];
 	if(req.body["tags"])
 		tags = tags.concat(req.body.tags);
+
+	// remove duplicates
+	//tags = tags.filter((val, i) => tags.indexOf(val) === i);
 
 	if(imageIDs.length != 0)
 	{

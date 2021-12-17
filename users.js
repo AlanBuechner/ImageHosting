@@ -34,6 +34,43 @@ const db = new Client({
 db.connect()
 .then(async ()=>{
 	console.log("connected to postgresql");
+
+	// create tables
+	await query(`
+
+	create table if not exists Users(
+		id bigint not null,
+		username varchar(255) not null,
+		password varchar(255) not null,
+		email varchar(255) not null,
+		primary key(id)
+	);
+	
+	do
+	$do$
+	begin
+	if not exists(select * from pg_tables where tablename = 'session') then
+		create table if not exists session (
+			sid varchar not null collate "default",
+			sess json not null,
+			expire timestamp(6) not null
+		) WITH (OIDS=FALSE);
+	
+		ALTER TABLE session ADD CONSTRAINT session_pkey PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
+	end if;
+	end
+	$do$;
+
+	create or replace function remove_dup (anyarray) returns anyarray
+	immutable strict language sql as $remove$
+		select array(
+			select distinct unnest($1)
+		);
+	$remove$;
+
+	`);
+
+
 }).catch(e=>{
 	console.log("faild to connect to postgresql");
 	console.log(e)
@@ -290,10 +327,10 @@ async function AddImageTagRelation(userID, imageID, tag)
 	let tagID = await CreateTag(userID, tag);
 	
 	// add the tag to the image
-	query("update Images"+userID+" set tags = array_append(tags, uuid('"+tagID+"')) where id = uuid('"+imageID+"')");
+	query("update Images"+userID+" set tags = remove_dup(array_append(tags, uuid('"+tagID+"'))) where id = uuid('"+imageID+"')");
 	
 	// add the image to the tag
-	query("update Tags"+userID+" set images = array_append(images, uuid('"+imageID+"')) where id = uuid('"+tagID+"')");
+	query("update Tags"+userID+" set images = remove_dup(array_append(images, uuid('"+imageID+"'))) where id = uuid('"+tagID+"')");
 }
 
 // addes a image tag relation
@@ -306,10 +343,10 @@ async function AddImageTagsRelation(userID, imageID, tags)
 	}
 
 	// add the tag to the image
-	query("update Images"+userID+" set tags = array_cat(tags, array["+tagIDs.join(",")+"]) where id = uuid('"+imageID+"')");
+	query("update Images"+userID+" set tags = remove_dup(array_cat(tags, array["+tagIDs.join(",")+"])) where id = uuid('"+imageID+"')");
 
 	// add the image to the tag
-	query("update Tags"+userID+" set images = array_append(images, uuid('"+imageID+"')) where id in (uuid('"+tagIDs.join("'),uuid('")+"'))");
+	query("update Tags"+userID+" set images = remove_dup(array_append(images, uuid('"+imageID+"'))) where id in (uuid('"+tagIDs.join("'),uuid('")+"'))");
 }
 
 // addes a image tag relation
@@ -321,12 +358,11 @@ async function AddImageTagRelations(userID, imageIDs, tags)
 		tagIDs.push(await(CreateTag(userID, tags[i])));
 	}
 	
-	
 	// add the tag to the image
-	query("update Images"+userID+" set tags = array_cat(tags, array[uuid('"+tagIDs.join("'),uuid('")+"')]) where id in (uuid('"+imageIDs.join("'),uuid('")+"'))");
+	query("update Images"+userID+" set tags = remove_dup(array_cat(tags, array[uuid('"+tagIDs.join("'),uuid('")+"')])) where id in (uuid('"+imageIDs.join("'),uuid('")+"'))");
 	
 	// add the image to the tag
-	query("update Tags"+userID+" set images = array_cat(images, array[uuid('"+imageIDs.join("'),uuid('")+"')]) where id in (uuid('"+tagIDs.join("'),uuid('")+"'))");
+	query("update Tags"+userID+" set images = remove_dup(array_cat(images, array[uuid('"+imageIDs.join("'),uuid('")+"')])) where id in (uuid('"+tagIDs.join("'),uuid('")+"'))");
 }
 
 // removes an image from a tag
