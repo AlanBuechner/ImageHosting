@@ -246,7 +246,8 @@ app.post('/upload', redirectLogin, upload, async function(req, res){
 	}
 
 	let tags = ["all"];
-	tags = tags.concat(JSON.parse(req.query["tags"] ? req.query["tags"] : "[]"));
+	if(req.body["tags"])
+		tags = tags.concat(req.body.tags);
 
 	if(imageIDs.length != 0)
 	{

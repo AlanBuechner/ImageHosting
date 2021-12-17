@@ -1,11 +1,12 @@
 $(document).ready(function(){
 
-	var data = {images:[]};
+	var data = {images:[], tags:[]};
 	let tagsData = CreateTags([], []);
 
 	// add the tag to the tags array when the tag is added
 	$('.tags').on('tagAdded', function(e, tag){
 		tagsData.tags.push(tag);
+		data.tags.push(tag);
 	});
 
 	// remove the tag from the tags array when the tag is removed
@@ -57,13 +58,17 @@ $(document).ready(function(){
 		{
 			var formData = new FormData();
 
-			for (i = 0; i < data.images.length; i++) {
+			for (let i = 0; i < data.images.length; i++) {
 				formData.append("image", data.images[i]);
+			}
+
+			for(let tag in data.tags){
+				formData.append("tags", data.tags[tag]);
 			}
 			
 			$.ajax({
 				type: 'POST',
-				url: '/upload' + (tagsData.tags.length != 0 ? '?tags=["'+tagsData.tags.join('","')+'"]' : ''),
+				url: '/upload',
 				data: formData,
 				
 				async: false,
