@@ -1,6 +1,38 @@
 $(document).ready(function(){
 
-	var data = {images:[], tags:[]};
+	var collCheckBox = $("#controles #collection #collCheck");
+
+	function SetCollectionStyle()
+	{
+		if(collCheckBox.is(":checked") || collCheckBox.is(":hover")){
+			collCheckBox.parent().css(
+				{
+					"background-color": "#32CD32",
+					"border-color": "#32CD32",
+					"color": "#444"
+				}
+			);
+		}
+		else{
+			collCheckBox.parent().css(
+				{
+					"background-color": "transparent",
+					"border-color": "#17a2b8",
+					"color": "#ccc"
+				}
+			);
+		}
+	}
+
+	collCheckBox.click(SetCollectionStyle);
+
+	collCheckBox.parent().mousemove(SetCollectionStyle);
+
+	var images = [];
+	var data = {
+		media:[], 
+		tags:[]
+	};
 	let tagsData = CreateTags([], []);
 
 	// add the tag to the tags array when the tag is added
@@ -20,7 +52,11 @@ $(document).ready(function(){
 			const reader = new FileReader();
 			const name = file.name;
 
-			data.images.push(file);
+			data.media.push({
+				tags:[], 
+				images:[name]
+			});
+			images.push(file);
 
 			reader.addEventListener('load', function(e){
 				const url = this.result;
@@ -44,7 +80,8 @@ $(document).ready(function(){
 				$(".remove").on("click", function(e){
 					const parent = $(this).parent();
 					const index = $("#gallery").index(parent);
-					data.images.splice(index, 1);
+					data.media.splice(index, 1);
+					images.splice(index, 1);
 					parent.remove();
 				});
 			});
@@ -54,17 +91,16 @@ $(document).ready(function(){
 
 	$('#upload').on('click', function(){
 
-		if(data.images.length != 0)
+		if(data.media.length != 0)
 		{
 			var formData = new FormData();
 
-			for (let i = 0; i < data.images.length; i++) {
-				formData.append("image", data.images[i]);
+			for (let i = 0; i < images.length; i++) 
+			{
+				formData.append("image", images[i]);
 			}
 
-			for(let tag in data.tags){
-				formData.append("tags", data.tags[tag]);
-			}
+			formData.append('s', JSON.stringify(data));
 			
 			$.ajax({
 				type: 'POST',

@@ -108,3 +108,27 @@
 {
 	display: inline-block;
 }
+
+#controles
+{
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+#controles #collection
+{
+	height: 28px;
+	border: 2px solid #17a2b8;
+	border-radius: 15px;
+	padding-left: 7.5px;
+	padding-right: 7.5px;
+	transition: 0.5s;
+	cursor: pointer;
+	color: #ccc;
+}
+
+#controles #collection #collCheck
+{
+	appearance: none;
+}

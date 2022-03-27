@@ -129,11 +129,11 @@ app.get('/files', redirectLogin, async function(req, res){
 	res.send({files: response, userID: userID});
 });
 
-app.get('/imageName', redirectLogin, async function(req, res){
+app.get('/imageFiles', redirectLogin, async function(req, res){
 	const userID = await req.session.userId;
 	const imageID = await req.query['imageID'];
-	const response = await users.GetImageNameFromID(userID, imageID);
-	res.send({name: response, userID: userID});
+	const response = await users.GetImageFilesFromID(userID, imageID);
+	res.send({files: response, userID: userID});
 });
 
 app.get('/imageTagNames', redirectLogin, async function(req, res){
@@ -209,57 +209,62 @@ app.get('/account', redirectLogin, function(req, res){
 app.post('/upload', redirectLogin, upload, async function(req, res){
 	// add image to user tags
 	const userID = req.session.userId;
+
+	data = JSON.parse(req.body.s);
 	
 	let imageIDs = [];
-	for(let i = 0; i < req.files.length; i++){
-		const fileName = await req.files[i].filename;
-		const path = req.files[i].path;
-		if(isVideo(fileName) && false)
+	for(let i = 0; i < data.media.length; i++)
+	{
+		let imageNames = [];
+		for(let j = 0; j < data.media[i].images.length; j++)
 		{
-			const thumbnailName = fileName.substring(0, fileName.length-3);
-			const conf = {
-				start_time				: 0,		// Start time to recording
-				duration_time			: 1,		// Duration of recording
-				frame_rate				: 1,		// Number of the frames to capture in one second
-				size					: null,		// Dimension each frame
-				number					: 1,		// Total frame to capture
-				every_n_frames			: null,		// Frame to capture every N frames
-				every_n_seconds			: null,		// Frame to capture every N seconds
-				every_n_percentage		: null,		// Frame to capture every N percentage range
-				keep_pixel_aspect_ratio	: true,		// Mantain the original pixel video aspect ratio
-				keep_aspect_ratio		: true,		// Mantain the original aspect ratio
-				padding_color			: 'black',	// Padding color
-				file_name				: thumbnailName,		// File name
-			};
-
-			try{
-				let proc = await new ffmpeg(path);
-				proc.fnExtractFrameToJPG("users/"+userID. conf);
+			const file = await req.files.find(e => e.originalname == data.media[i].images[j]);
+			const fileName = file.filename;
+			const path = file.path;
+			if(isVideo(fileName) && false)
+			{
+				const thumbnailName = fileName.substring(0, fileName.length-3);
+				const conf = {
+					start_time				: 0,		// Start time to recording
+					duration_time			: 1,		// Duration of recording
+					frame_rate				: 1,		// Number of the frames to capture in one second
+					size					: null,		// Dimension each frame
+					number					: 1,		// Total frame to capture
+					every_n_frames			: null,		// Frame to capture every N frames
+					every_n_seconds			: null,		// Frame to capture every N seconds
+					every_n_percentage		: null,		// Frame to capture every N percentage range
+					keep_pixel_aspect_ratio	: true,		// Mantain the original pixel video aspect ratio
+					keep_aspect_ratio		: true,		// Mantain the original aspect ratio
+					padding_color			: 'black',	// Padding color
+					file_name				: thumbnailName,		// File name
+				};
+				
+				try{
+					let proc = await new ffmpeg(path);
+					proc.fnExtractFrameToJPG("users/"+userID. conf);
+				}
+				catch(e){
+					console.log(e.code);
+					console.log(e.msg);
+				}
 			}
-			catch(e){
-				console.log(e.code);
-				console.log(e.msg);
-			}
+			imageNames.push(fileName);
 		}
 		
-		imageIDs.push(await users.CreateImage(userID, fileName));
-
+		imageIDs.push(await users.CreateImageWithTags(userID, imageNames, data.media[i].tags));
 	}
 
 	let tags = ["all"];
-	if(req.body["tags"])
-		tags = tags.concat(req.body.tags);
-
-	// remove duplicates
-	//tags = tags.filter((val, i) => tags.indexOf(val) === i);
-
+	if(data["tags"])
+	tags = tags.concat(data.tags);
+	
 	if(imageIDs.length != 0)
 	{
 		users.AddImageTagRelations(userID, imageIDs, tags);
 		res.send('success');
 	}
 });
-
+		
 // delete images
 app.delete('/removeImage', redirectLogin, async function(req, res){
 	const userID = await req.session.userId;

@@ -99,11 +99,19 @@ async function AddUser(username, email, password, callback)
 			return;
 		}
 
-		await db.query("create table Tags" + uuid + "(id uuid not null, name varchar(255) not null, images uuid[] not null, primary key(id))"); // add a tages table
+		await db.query(`
+			create table Tags${uuid} (
+				id uuid not null, 
+				name varchar(255) not null, 
+				images uuid[] not null, 
+				primary key(id)
+			)
+		`); // add a tages table
+
 		await db.query(`
 			create table Images${uuid.toString()} (
 				id uuid not null, 
-				name varchar(255) not null, 
+				files text[] not null, 
 				tags uuid[] not null, 
 				uploadTime timestamp without time zone not null, 
 				primary key(id)
@@ -182,13 +190,6 @@ async function TagExists(userID, name)
 }
 
 // checks if a image exists
-async function ImageExists(userID, name)
-{
-	let result = await query("select id from Images"+userID+" where name = '"+name+"'");
-	return result.length != 0;
-}
-
-// checks if a image exists
 async function ImageExistsFromID(userID, imageID)
 {
 	let result = await query("select id from Images"+userID+" where id = uuid('"+imageID+"')");
@@ -223,20 +224,24 @@ async function CreateTag(userID, name)
 	return id;
 }
 
-async function CreateImage(userID, name)
+async function CreateImage(userID, files)
 {
 	let id = -1;
-	// add the image if it dosent exitst
-	if(!(await ImageExists(userID, name))){
-		console.log("createing image " + name);
-		// create a id for the new tag
-		id = imageUUID();
-		await query("insert into Images"+userID+" values($1, $2, $3, CURRENT_TIMESTAMP)", [id, name, []]); // add new image to images
-	}
-	else{
-		// get the id for the tag
-		id = (await query("select id from Images"+userID+" where name = '"+name+"' order by uploadTime"))[0].id;
-	}
+	
+	console.log("createing image");
+	// create a id for the new image
+	id = imageUUID();
+	await query("insert into Images"+userID+" values($1, $2, $3, CURRENT_TIMESTAMP)", [id, [], []]); // add new image to images
+	await query("update Images"+userID+" set files = remove_dup(array_cat(files, array['"+files.join("','")+"']))");
+	
+	return id;
+}
+
+async function CreateImageWithTags(userID, files, tags)
+{
+	let id = CreateImage(userID, files);
+	if(tags.length != 0)
+		AddImageTagsRelation(userID, id, tags);
 	return id;
 }
 
@@ -307,9 +312,9 @@ async function GetImageFromID(userID, imageID){
 	return (await query("select * from Images"+userID+" where id = uuid('"+imageID+"')"))[0];
 }
 
-// get the name from the id
-async function GetImageNameFromID(userID, imageID){
-	return (await query("select name from Images"+userID+" where id = uuid('"+imageID+"')"))[0].name;
+// get the files from the id
+async function GetImageFilesFromID(userID, imageID){
+	return (await query("select files from Images"+userID+" where id = uuid('"+imageID+"')"))[0].files;
 }
 
 // get the tags from the id
@@ -394,10 +399,10 @@ module.exports = {
 	GetUserByEmail,
 	// tags
 	TagExists,
-	ImageExists,
 	GetTags,
 	CreateTag,
 	CreateImage,
+	CreateImageWithTags,
 	// tag info from id
 	GetTagFromID,
 	GetTagNameFromID,
@@ -409,7 +414,7 @@ module.exports = {
 	GetTagImagesFromName,
 	// image info from id
 	GetImageFromID,
-	GetImageNameFromID,
+	GetImageFilesFromID,
 	GetTagNamesFromIDs,
 	GetImageTagsFromID,
 

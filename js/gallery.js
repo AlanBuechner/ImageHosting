@@ -13,17 +13,17 @@ $(document).ready(async function(){
 		}
 	});
 
-	// get the images file name and extention
-	async function GetImageName(imageID){
+	// get the images file names and extention
+	async function GetImageFiles(imageID){
 		if(imageID == null)
 			return null;
 
 		let info = {};
 		await $.ajax({
 			type: 'GET',
-			url: '/imageName?imageID='+imageID,
+			url: '/imageFiles?imageID='+imageID,
 			success: function(res){
-				info = res.name;
+				info = res.files;
 			}
 		});
 		return info;
@@ -95,12 +95,12 @@ $(document).ready(async function(){
 			if(images.length > 0){
 				for(let i = 0; i < images.length; i++){
 					
-					let name = await GetImageName(images[i]);
-					let video = isVideo(name);
+					let files = await GetImageFiles(images[i]);
+					let video = isVideo(files[0]);
 					
 					let html = `<span class="image">`
-					if(video) 	html +=	`<video class="media" src="images/${data.userID}/${name}">`;
-					else 		html +=	`<img class="media" src="images/${data.userID}/${name}">`;
+					if(video) 	html +=	`<video class="media" src="images/${data.userID}/${files[0]}">`;
+					else 		html +=	`<img class="media" src="images/${data.userID}/${files[0]}">`;
 					html += `</span>`;
 					galleryhtml += html;
 				}
@@ -113,15 +113,17 @@ $(document).ready(async function(){
 			var carouselhtml = $('.track').html();
 			if(images.length > 0){
 				for(let i = 0; i < images.length; i++){
-					let name = await GetImageName(images[i]);
-					let video = isVideo(name);
-
-					carouselhtml += `<li class="slide">`;
-					if(video)
-						carouselhtml += `<video src="images/${data.userID}/${name}" controls>`;
-					else
-						carouselhtml += `<img src="images/${data.userID}/${name}">`;
-					carouselhtml += `</li>`;
+					let files = await GetImageFiles(images[i]);
+					
+					let html = `<li class="slide">`;
+					for(let j = 0; j < files.length; j++)
+					{
+						let video = isVideo(files[0]);
+						if(video)	html += `<video src="images/${data.userID}/${files[j]}" controls>`;
+						else		html += `<img src="images/${data.userID}/${files[j]}">`;
+					}
+					html += `</li>`;
+					carouselhtml += html;
 				}
 			}
 			return carouselhtml;
